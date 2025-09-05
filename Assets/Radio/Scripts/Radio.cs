@@ -6,7 +6,6 @@ public class Radio : MonoBehaviour
 
     [Header("Audio Sources")]
     [SerializeField] private AudioSource musicSource;
-    [SerializeField] private AudioSource sfxSource;
 
     [Header("Sound Libraries")]
     [SerializeField] private SoundLibrary musicLibrary;
@@ -40,7 +39,19 @@ public class Radio : MonoBehaviour
         var sound = sfxLibrary.GetSound(id);
         if (sound == null || sound.clip == null) return;
 
-        sfxSource.PlayOneShot(sound.clip, sound.volume);
+        GameObject temp = new GameObject($"SFX_{sound.clip.name}");
+        temp.transform.parent = transform;
+
+        AudioSource tempSource = temp.AddComponent<AudioSource>();
+        tempSource.clip = sound.clip;
+        tempSource.volume = sound.volume;
+        tempSource.loop = sound.loop;
+        tempSource.Play();
+
+        if (!tempSource.loop)
+        {
+            Destroy(temp, sound.clip.length + 0.1f);
+        }
     }
 
     public void StopMusic()
