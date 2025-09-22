@@ -14,5 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soundID: Music/Test01
   clip: {fileID: 8300000, guid: 9faeea811774de243b814e0e6cf23c8a, type: 3}
-  loop: 0
+  loop: 1
   volume: 1
+  minPitch: 1
+  maxPitch: 1

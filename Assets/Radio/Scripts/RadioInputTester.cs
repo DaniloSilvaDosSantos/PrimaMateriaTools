@@ -7,6 +7,7 @@ public class RadioInputTester : MonoBehaviour
     [SerializeField] private KeyCode sfxKey = KeyCode.N;
     [SerializeField] private KeyCode musicFadeIn = KeyCode.I;
     [SerializeField] private KeyCode musicFadeOut = KeyCode.O;
+    [SerializeField] private KeyCode musicCrossFade = KeyCode.U;
 
     [SerializeField] private bool isMusicPlaying = false;
 
@@ -28,7 +29,7 @@ public class RadioInputTester : MonoBehaviour
 
         if (Input.GetKeyDown(musicFadeIn))
         {
-            Radio.Instance.PlayMusic("Music/Test01", true, 1f);
+            Radio.Instance.PlayMusic("Music/Test01", MusicTransition.Fade, 1f);
             isMusicPlaying = true;
         }
 
@@ -36,6 +37,11 @@ public class RadioInputTester : MonoBehaviour
         {
             Radio.Instance.StopMusic(true, 1f);
             isMusicPlaying = false;
+        }
+
+        if (Input.GetKeyDown(musicCrossFade))
+        {
+            Radio.Instance.PlayMusic("Music/Test02", MusicTransition.Crossfade, 2f);
         }
 
         if (Input.GetKeyDown(sfxKey))

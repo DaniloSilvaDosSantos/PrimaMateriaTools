@@ -6,13 +6,17 @@ public class Radio : MonoBehaviour
     public static Radio Instance { get; private set; }
 
     [Header("Audio Sources")]
-    [SerializeField] private AudioSource musicSource;
+    [SerializeField] private AudioSource musicSourceA;
+    [SerializeField] private AudioSource musicSourceB;
+
+    private AudioSource activeMusicSource;
+    private AudioSource inactiveMusicSource;
 
     [Header("Sound Libraries")]
     [SerializeField] private SoundLibrary musicLibrary;
     [SerializeField] private SoundLibrary sfxLibrary;
 
-    private Coroutine currentFade;
+    private Coroutine currentTransition;
 
     private void Awake()
     {
@@ -23,78 +27,154 @@ public class Radio : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        activeMusicSource = musicSourceA;
+        inactiveMusicSource = musicSourceB;
     }
 
     // MUSICS METHODS //
 
-    public void PlayMusic(string id, bool fade = false, float fadeDuration = 1f)
+    public void PlayMusic(string id, MusicTransition transition = MusicTransition.None, float duration = 1f)
     {
         var sound = musicLibrary.GetSound(id);
         if (sound == null || sound.clip == null) return;
 
-        if (fade)
+        if (currentTransition != null) StopFade(currentTransition);
+
+        Debug.Log($"Transition raw: {transition} ({(int)transition})");
+
+        switch (transition)
         {
-            if (currentFade != null) StopCoroutine(currentFade);
-            currentFade = StartCoroutine(FadeInMusic(sound, fadeDuration));
+            case MusicTransition.None:
+                PlayDirect(sound);
+                break;
+
+            case MusicTransition.Fade:
+                currentTransition = StartCoroutine(FadeOutInMusic(sound, duration));
+                break;
+
+            case MusicTransition.Crossfade:
+                currentTransition = StartCoroutine(Crossfade(sound, duration));
+                break;
         }
-        else
-        {
-            musicSource.Stop();
-            musicSource.clip = sound.clip;
-            musicSource.loop = sound.loop;
-            musicSource.volume = sound.volume;
-            musicSource.Play();
-        }
+    }
+
+    private void PlayDirect(SoundData sound)
+    {
+        activeMusicSource.Stop();
+        activeMusicSource.clip = sound.clip;
+        activeMusicSource.loop = sound.loop;
+        activeMusicSource.volume = sound.volume;
+        activeMusicSource.Play();
     }
 
     public void StopMusic(bool fade = false, float fadeDuration = 1f)
     {
         if (fade)
         {
-            if (currentFade != null) StopCoroutine(currentFade);
-            currentFade = StartCoroutine(FadeOutMusic(fadeDuration));
+            if (currentTransition != null) StopFade(currentTransition);
+            currentTransition = StartCoroutine(FadeOutMusic(fadeDuration));
         }
         else
         {
-            musicSource.Stop();
+            activeMusicSource.Stop();
         }
+    }
+
+    // MUSICS TRANSITIONS //
+
+    private IEnumerator FadeOutInMusic(SoundData newSound, float duration)
+    {
+        // Fade Out
+        yield return StartCoroutine(FadeOutMusic(duration * 0.5f));
+
+        // Fade In
+        yield return StartCoroutine(FadeInMusic(newSound, duration * 0.5f));
     }
 
     
+    private IEnumerator FadeOutMusic(float duration, bool resetVolumeToStartVolume = false)
+    {
+        float startVolume = activeMusicSource.volume;
+
+        float timer = 0f;
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+            float progress = duration > 0f ? timer / duration : 1f;
+            activeMusicSource.volume = Mathf.Lerp(startVolume, 0f, progress);
+            yield return null;
+        }
+
+        activeMusicSource.volume = 0f;
+        activeMusicSource.Stop();
+
+        if (resetVolumeToStartVolume) activeMusicSource.volume = startVolume;
+    }
+    
     private IEnumerator FadeInMusic(SoundData sound, float duration)
     {
-        musicSource.Stop();
-        musicSource.clip = sound.clip;
-        musicSource.loop = sound.loop;
-        musicSource.volume = 0f;
-        musicSource.Play();
+        activeMusicSource.Stop();
+        activeMusicSource.clip = sound.clip;
+        activeMusicSource.loop = sound.loop;
+        activeMusicSource.volume = 0f;
+        activeMusicSource.Play();
 
         float timer = 0f;
+
         while (timer < duration)
         {
             timer += Time.deltaTime;
             float progress = duration > 0f ? timer / duration : 1f;
-            musicSource.volume = Mathf.Lerp(0f, sound.volume, progress);
+            activeMusicSource.volume = Mathf.Lerp(0f, sound.volume, progress);
             yield return null;
         }
-        musicSource.volume = sound.volume;
+
+        activeMusicSource.volume = sound.volume;
     }
 
-    private IEnumerator FadeOutMusic(float duration)
+    private IEnumerator Crossfade(SoundData newSound, float duration)
     {
-        float startVolume = musicSource.volume;
+
+        inactiveMusicSource.clip = newSound.clip;
+        inactiveMusicSource.loop = newSound.loop;
+        inactiveMusicSource.volume = 0f;
+        inactiveMusicSource.Play();
 
         float timer = 0f;
+        float startVolume = activeMusicSource.volume;
+
         while (timer < duration)
         {
             timer += Time.deltaTime;
-            float progress = duration > 0f ? timer / duration : 1f;
-            musicSource.volume = Mathf.Lerp(startVolume, 0f, progress);
+            float t = timer / duration;
+
+            activeMusicSource.volume = Mathf.Lerp(startVolume, 0f, t);
+            inactiveMusicSource.volume = Mathf.Lerp(0f, newSound.volume, t);
+
             yield return null;
         }
 
-        musicSource.Stop();
-        musicSource.volume = startVolume;
+        activeMusicSource.Stop();
+        inactiveMusicSource.volume = newSound.volume;
+
+        var temp = activeMusicSource;
+        activeMusicSource = inactiveMusicSource;
+        inactiveMusicSource = temp;
+    }
+
+    public void StopFade(Coroutine fadeRoutine, bool stopAndMute = false)
+    {
+        if (fadeRoutine != null)
+        {
+            StopCoroutine(fadeRoutine);
+
+            if (stopAndMute)
+            {
+                activeMusicSource.Stop();
+                activeMusicSource.volume = 0f;
+            }
+        }
     }
 
     // SFX METHODS
@@ -115,8 +195,6 @@ public class Radio : MonoBehaviour
         tempSource.loop = sound.loop;
 
         tempSource.Play();
-
-        //tempSource.pitch = 1f;
 
         if (!tempSource.loop)
         {
