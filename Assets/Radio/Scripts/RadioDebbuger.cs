@@ -5,7 +5,8 @@ using System.Collections.Generic;
 public class RadioDebugger : MonoBehaviour
 {
     [Header("Radio References")]
-    [SerializeField] private AudioSource musicSource;
+    [SerializeField] private AudioSource musicSourceA;
+    [SerializeField] private AudioSource musicSourceB;
     [SerializeField] private Transform sfxParent;
 
     [Header("UI")]
@@ -15,17 +16,11 @@ public class RadioDebugger : MonoBehaviour
     {
         List<string> lines = new List<string>();
 
-        if (musicSource != null)
-        {
-            string clipName = musicSource.clip != null ? musicSource.clip.name : "None";
-            string loop = musicSource.clip != null ? (musicSource.loop ? "Yes" : "No") : "—";
-            string time = musicSource.clip != null 
-                ? $"{FormatTime(musicSource.time)} / {FormatTime(musicSource.clip.length)}" 
-                : "--:--:---";
+        // --- MUSIC SOURCES ---
+        LogAudioSource(musicSourceA, "[MUSIC]", lines);
+        LogAudioSource(musicSourceB, "[MUSIC]", lines);
 
-            lines.Add($"[MUSIC] {musicSource.gameObject.name} | Clip: {clipName} | Vol: {musicSource.volume:F2} | Loop: {loop} | Time: {time}");
-        }
-
+        // --- SFX SOURCES ---
         if (sfxParent != null)
         {
             foreach (Transform child in sfxParent)
@@ -33,16 +28,24 @@ public class RadioDebugger : MonoBehaviour
                 AudioSource src = child.GetComponent<AudioSource>();
                 if (src == null || src.clip == null) continue;
 
-                if (musicSource != null && src == musicSource) continue;
+                if (src == musicSourceA || src == musicSourceB) continue;
 
-                string loop = src.loop ? "Yes" : "No";
-                string time = $"{FormatTime(src.time)} / {FormatTime(src.clip.length)}";
-
-                lines.Add($"[SFX] {src.gameObject.name} | Clip: {src.clip.name} | Vol: {src.volume:F2} | Loop: {loop} | Time: {time}");
+                LogAudioSource(src, "[SFX]", lines);
             }
         }
 
         debugText.text = lines.Count > 0 ? string.Join("\n", lines) : "[Radio] ---.";
+    }
+
+    private void LogAudioSource(AudioSource src, string tag, List<string> lines)
+    {
+        if (src == null) return;
+
+        string clipName = src.clip != null ? src.clip.name : "None";
+        string loop = src.clip != null ? (src.loop ? "Yes" : "No") : "—";
+        string time = src.clip != null ? $"{FormatTime(src.time)} / {FormatTime(src.clip.length)}" : "--:--:---";
+
+        lines.Add($"{tag} {src.gameObject.name} | Clip: {clipName} | Vol: {src.volume:F2} | Pitch: {src.pitch:F2} | Loop: {loop} | Time: {time}");
     }
 
     private string FormatTime(float t)
