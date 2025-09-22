@@ -108,10 +108,15 @@ public class Radio : MonoBehaviour
         temp.transform.parent = transform;
 
         AudioSource tempSource = temp.AddComponent<AudioSource>();
+
+        tempSource.pitch = Random.Range(sound.minPitch, sound.maxPitch);
         tempSource.clip = sound.clip;
         tempSource.volume = sound.volume;
         tempSource.loop = sound.loop;
+
         tempSource.Play();
+
+        //tempSource.pitch = 1f;
 
         if (!tempSource.loop)
         {
