@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: MusicTest02
   m_EditorClassIdentifier: 
   soundID: Music/Test02
-  clip: {fileID: 8300000, guid: a2ba7a21427121a4c885f5ec6ca7e49c, type: 3}
+  clips:
+  - {fileID: 8300000, guid: a2ba7a21427121a4c885f5ec6ca7e49c, type: 3}
   loop: 0
   volume: 1
   minPitch: 1
