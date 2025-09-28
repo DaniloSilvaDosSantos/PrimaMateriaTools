@@ -16,9 +16,10 @@ MonoBehaviour:
   clips:
   - clip: {fileID: 8300000, guid: 9e34304e9b5ef8542a6f5a5b12daade5, type: 3}
     weight: 3
+    volume: 1
   - clip: {fileID: 8300000, guid: 663d19031ed580a498c9e288deb16523, type: 3}
     weight: 1
+    volume: 0.3
   loop: 0
-  volume: 1
   minPitch: 0.8
   maxPitch: 1.2

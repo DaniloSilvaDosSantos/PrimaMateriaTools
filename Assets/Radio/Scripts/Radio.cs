@@ -72,7 +72,7 @@ public class Radio : MonoBehaviour
         activeMusicSource.Stop();
         activeMusicSource.clip = sound.clips[soundClipIndex].clip;
         activeMusicSource.loop = sound.loop;
-        activeMusicSource.volume = sound.volume;
+        activeMusicSource.volume = sound.clips[soundClipIndex].volume;
         activeMusicSource.Play();
     }
 
@@ -134,11 +134,11 @@ public class Radio : MonoBehaviour
         {
             timer += Time.deltaTime;
             float progress = duration > 0f ? timer / duration : 1f;
-            activeMusicSource.volume = Mathf.Lerp(0f, sound.volume, progress);
+            activeMusicSource.volume = Mathf.Lerp(0f, sound.clips[soundClipIndex].volume, progress);
             yield return null;
         }
 
-        activeMusicSource.volume = sound.volume;
+        activeMusicSource.volume = sound.clips[soundClipIndex].volume;
     }
 
     private IEnumerator Crossfade(SoundData newSound, int soundClipIndex, float duration)
@@ -158,13 +158,13 @@ public class Radio : MonoBehaviour
             float t = timer / duration;
 
             activeMusicSource.volume = Mathf.Lerp(startVolume, 0f, t);
-            inactiveMusicSource.volume = Mathf.Lerp(0f, newSound.volume, t);
+            inactiveMusicSource.volume = Mathf.Lerp(0f, newSound.clips[soundClipIndex].volume, t);
 
             yield return null;
         }
 
         activeMusicSource.Stop();
-        inactiveMusicSource.volume = newSound.volume;
+        inactiveMusicSource.volume = newSound.clips[soundClipIndex].volume;
 
         var temp = activeMusicSource;
         activeMusicSource = inactiveMusicSource;
@@ -202,7 +202,7 @@ public class Radio : MonoBehaviour
 
         tempSource.pitch = Random.Range(sound.minPitch, sound.maxPitch);
         tempSource.clip = sound.clips[soundClipIndex].clip;
-        tempSource.volume = sound.volume;
+        tempSource.volume = sound.clips[soundClipIndex].volume;
         tempSource.loop = sound.loop;
 
         tempSource.Play();

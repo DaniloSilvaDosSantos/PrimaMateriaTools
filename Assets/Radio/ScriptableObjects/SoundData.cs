@@ -5,10 +5,8 @@ using UnityEngine;
 public class SoundData : ScriptableObject
 {
     public string soundID;
-    public List<WeightedClip> clips;
+    public List<ClipData> clips;
     public bool loop;
-    [Range(0f, 1f)] public float volume = 1f;
-
 
     [Header("Pitch Variation")]
     [Range(0.5f, 2f)] public float minPitch = 1f;
@@ -16,9 +14,10 @@ public class SoundData : ScriptableObject
 }
 
 [System.Serializable]
-public class WeightedClip
+public class ClipData
 {
     public AudioClip clip;
     public float weight = 1f;
+    [Range(0f, 1f)] public float volume = 1f;
 }
 
