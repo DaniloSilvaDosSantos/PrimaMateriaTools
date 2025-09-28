@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Rendering;
+using UnityEditor.Timeline.Actions;
 using UnityEngine;
 
 public class Radio : MonoBehaviour
@@ -68,7 +70,7 @@ public class Radio : MonoBehaviour
     private void PlayDirect(SoundData sound, int soundClipIndex)
     {
         activeMusicSource.Stop();
-        activeMusicSource.clip = sound.clips[soundClipIndex];
+        activeMusicSource.clip = sound.clips[soundClipIndex].clip;
         activeMusicSource.loop = sound.loop;
         activeMusicSource.volume = sound.volume;
         activeMusicSource.Play();
@@ -121,7 +123,7 @@ public class Radio : MonoBehaviour
     private IEnumerator FadeInMusic(SoundData sound, int soundClipIndex, float duration)
     {
         activeMusicSource.Stop();
-        activeMusicSource.clip = sound.clips[soundClipIndex];
+        activeMusicSource.clip = sound.clips[soundClipIndex].clip;
         activeMusicSource.loop = sound.loop;
         activeMusicSource.volume = 0f;
         activeMusicSource.Play();
@@ -142,7 +144,7 @@ public class Radio : MonoBehaviour
     private IEnumerator Crossfade(SoundData newSound, int soundClipIndex, float duration)
     {
 
-        inactiveMusicSource.clip = newSound.clips[soundClipIndex];
+        inactiveMusicSource.clip = newSound.clips[soundClipIndex].clip;
         inactiveMusicSource.loop = newSound.loop;
         inactiveMusicSource.volume = 0f;
         inactiveMusicSource.Play();
@@ -193,13 +195,13 @@ public class Radio : MonoBehaviour
 
         if (sound == null || sound.clips[soundClipIndex] == null) return;
 
-        GameObject temp = new GameObject($"SFX_{sound.clips[soundClipIndex].name}");
+        GameObject temp = new GameObject($"SFX_{sound.clips[soundClipIndex].clip.name}");
         temp.transform.parent = transform;
 
         AudioSource tempSource = temp.AddComponent<AudioSource>();
 
         tempSource.pitch = Random.Range(sound.minPitch, sound.maxPitch);
-        tempSource.clip = sound.clips[soundClipIndex];
+        tempSource.clip = sound.clips[soundClipIndex].clip;
         tempSource.volume = sound.volume;
         tempSource.loop = sound.loop;
 
@@ -207,7 +209,7 @@ public class Radio : MonoBehaviour
 
         if (!tempSource.loop)
         {
-            Destroy(temp, sound.clips[soundClipIndex].length + 0.1f);
+            Destroy(temp, sound.clips[soundClipIndex].clip.length + 0.1f);
         }
     }
 
@@ -226,10 +228,29 @@ public class Radio : MonoBehaviour
         int lastIndex;
         lastPlayedIndex.TryGetValue(sound.soundID, out lastIndex);
 
-        int soundIndex = Random.Range(0, sound.clips.Count);
-        if (soundIndex == lastIndex) soundIndex = Random.Range(0, sound.clips.Count);
-        
+        int soundIndex = WeightedPick();
+
+        if (soundIndex == lastIndex) soundIndex = WeightedPick();
+
         lastPlayedIndex[sound.soundID] = soundIndex;
         return soundIndex;
+        
+        int WeightedPick()
+        {
+            float totalWeight = 0f;
+            foreach (var w in sound.clips) totalWeight += Mathf.Max(0f, w.weight);
+
+            float randSoundPick = Random.Range(0f, totalWeight);
+            float cumulativeWeight = 0f;
+
+            for (int i = 0; i < sound.clips.Count; i++)
+            {
+                cumulativeWeight += Mathf.Max(0f, sound.clips[i].weight);
+
+                if (randSoundPick <= cumulativeWeight) return i;
+            }
+
+            return sound.clips.Count - 1;
+        }
     }
 }
