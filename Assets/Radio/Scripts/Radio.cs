@@ -71,7 +71,7 @@ public class Radio : MonoBehaviour
     {
         activeMusicSource.Stop();
         activeMusicSource.clip = sound.clips[soundClipIndex].clip;
-        activeMusicSource.loop = sound.loop;
+        activeMusicSource.loop = sound.clips[soundClipIndex].loop;
         activeMusicSource.volume = ChooseVolume(sound, soundClipIndex);
         activeMusicSource.Play();
     }
@@ -124,7 +124,7 @@ public class Radio : MonoBehaviour
     {
         activeMusicSource.Stop();
         activeMusicSource.clip = sound.clips[soundClipIndex].clip;
-        activeMusicSource.loop = sound.loop;
+        activeMusicSource.loop = sound.clips[soundClipIndex].clip;
         activeMusicSource.volume = 0f;
         activeMusicSource.Play();
 
@@ -147,7 +147,7 @@ public class Radio : MonoBehaviour
     {
 
         inactiveMusicSource.clip = newSound.clips[soundClipIndex].clip;
-        inactiveMusicSource.loop = newSound.loop;
+        inactiveMusicSource.loop = newSound.clips[soundClipIndex].clip;
         inactiveMusicSource.volume = 0f;
         inactiveMusicSource.Play();
 
@@ -204,10 +204,10 @@ public class Radio : MonoBehaviour
 
         AudioSource tempSource = temp.AddComponent<AudioSource>();
 
-        tempSource.pitch = Random.Range(sound.minPitch, sound.maxPitch);
+        tempSource.pitch = ChoosePitch(sound, soundClipIndex);
         tempSource.clip = sound.clips[soundClipIndex].clip;
         tempSource.volume = ChooseVolume(sound, soundClipIndex);
-        tempSource.loop = sound.loop;
+        tempSource.loop = sound.clips[soundClipIndex].loop;
 
         tempSource.Play();
 
@@ -267,6 +267,18 @@ public class Radio : MonoBehaviour
         else
         {
             return sound.clips[soundClipIndex].maxVolume;
+        }
+    }
+
+    private float ChoosePitch(SoundData sound, int soundClipIndex)
+    {
+        if (sound.clips[soundClipIndex].minPitch < sound.clips[soundClipIndex].maxPitch)
+        {
+            return Random.Range(sound.clips[soundClipIndex].minPitch, sound.clips[soundClipIndex].maxPitch);
+        }
+        else
+        {
+            return sound.clips[soundClipIndex].maxPitch;
         }
     }
 }
