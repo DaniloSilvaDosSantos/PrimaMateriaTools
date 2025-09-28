@@ -1,9 +1,3 @@
-- No repeat rule, repeat the draw of the clip if it falls again;
-
-- Advanced Ramdomization;
-    - Adding weights per clips;
-    - Volume ramdomization;
-
 - Pooling for SFX;
 
 - Adding seguimented loops(loop point B to A) for musics;

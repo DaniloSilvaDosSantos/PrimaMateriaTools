@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Rendering;
+using UnityEditor.Timeline.Actions;
 using UnityEngine;
 
 public class Radio : MonoBehaviour
@@ -39,7 +41,7 @@ public class Radio : MonoBehaviour
 
     public void PlayMusic(string id, MusicTransition transition = MusicTransition.None, float duration = 1f)
     {
-        var sound = musicLibrary.GetSound(id);
+        var sound = musicLibrary.GetSoundData(id);
 
         int soundClipIndex = ChooseSound(sound);
 
@@ -68,9 +70,9 @@ public class Radio : MonoBehaviour
     private void PlayDirect(SoundData sound, int soundClipIndex)
     {
         activeMusicSource.Stop();
-        activeMusicSource.clip = sound.clips[soundClipIndex];
-        activeMusicSource.loop = sound.loop;
-        activeMusicSource.volume = sound.volume;
+        activeMusicSource.clip = sound.clips[soundClipIndex].clip;
+        activeMusicSource.loop = sound.clips[soundClipIndex].loop;
+        activeMusicSource.volume = ChooseVolume(sound, soundClipIndex);
         activeMusicSource.Play();
     }
 
@@ -121,34 +123,38 @@ public class Radio : MonoBehaviour
     private IEnumerator FadeInMusic(SoundData sound, int soundClipIndex, float duration)
     {
         activeMusicSource.Stop();
-        activeMusicSource.clip = sound.clips[soundClipIndex];
-        activeMusicSource.loop = sound.loop;
+        activeMusicSource.clip = sound.clips[soundClipIndex].clip;
+        activeMusicSource.loop = sound.clips[soundClipIndex].clip;
         activeMusicSource.volume = 0f;
         activeMusicSource.Play();
 
         float timer = 0f;
 
+        float sortedVolume = ChooseVolume(sound, soundClipIndex);
+
         while (timer < duration)
         {
             timer += Time.deltaTime;
             float progress = duration > 0f ? timer / duration : 1f;
-            activeMusicSource.volume = Mathf.Lerp(0f, sound.volume, progress);
+            activeMusicSource.volume = Mathf.Lerp(0f, sortedVolume, progress);
             yield return null;
         }
 
-        activeMusicSource.volume = sound.volume;
+        activeMusicSource.volume = sortedVolume;
     }
 
     private IEnumerator Crossfade(SoundData newSound, int soundClipIndex, float duration)
     {
 
-        inactiveMusicSource.clip = newSound.clips[soundClipIndex];
-        inactiveMusicSource.loop = newSound.loop;
+        inactiveMusicSource.clip = newSound.clips[soundClipIndex].clip;
+        inactiveMusicSource.loop = newSound.clips[soundClipIndex].clip;
         inactiveMusicSource.volume = 0f;
         inactiveMusicSource.Play();
 
         float timer = 0f;
         float startVolume = activeMusicSource.volume;
+
+        float sortedVolume = ChooseVolume(newSound, soundClipIndex);
 
         while (timer < duration)
         {
@@ -156,13 +162,13 @@ public class Radio : MonoBehaviour
             float t = timer / duration;
 
             activeMusicSource.volume = Mathf.Lerp(startVolume, 0f, t);
-            inactiveMusicSource.volume = Mathf.Lerp(0f, newSound.volume, t);
+            inactiveMusicSource.volume = Mathf.Lerp(0f, sortedVolume, t);
 
             yield return null;
         }
 
         activeMusicSource.Stop();
-        inactiveMusicSource.volume = newSound.volume;
+        inactiveMusicSource.volume = sortedVolume;
 
         var temp = activeMusicSource;
         activeMusicSource = inactiveMusicSource;
@@ -187,27 +193,27 @@ public class Radio : MonoBehaviour
 
     public void PlaySFX(string id)
     {
-        var sound = sfxLibrary.GetSound(id);
+        var sound = sfxLibrary.GetSoundData(id);
 
         int soundClipIndex = ChooseSound(sound);
 
         if (sound == null || sound.clips[soundClipIndex] == null) return;
 
-        GameObject temp = new GameObject($"SFX_{sound.clips[soundClipIndex].name}");
+        GameObject temp = new GameObject($"SFX_{sound.clips[soundClipIndex].clip.name}");
         temp.transform.parent = transform;
 
         AudioSource tempSource = temp.AddComponent<AudioSource>();
 
-        tempSource.pitch = Random.Range(sound.minPitch, sound.maxPitch);
-        tempSource.clip = sound.clips[soundClipIndex];
-        tempSource.volume = sound.volume;
-        tempSource.loop = sound.loop;
+        tempSource.pitch = ChoosePitch(sound, soundClipIndex);
+        tempSource.clip = sound.clips[soundClipIndex].clip;
+        tempSource.volume = ChooseVolume(sound, soundClipIndex);
+        tempSource.loop = sound.clips[soundClipIndex].loop;
 
         tempSource.Play();
 
         if (!tempSource.loop)
         {
-            Destroy(temp, sound.clips[soundClipIndex].length + 0.1f);
+            Destroy(temp, sound.clips[soundClipIndex].clip.length + 0.1f);
         }
     }
 
@@ -226,10 +232,53 @@ public class Radio : MonoBehaviour
         int lastIndex;
         lastPlayedIndex.TryGetValue(sound.soundID, out lastIndex);
 
-        int soundIndex = Random.Range(0, sound.clips.Count);
-        if (soundIndex == lastIndex) soundIndex = Random.Range(0, sound.clips.Count);
-        
+        int soundIndex = WeightedPick();
+
+        if (soundIndex == lastIndex) soundIndex = WeightedPick();
+
         lastPlayedIndex[sound.soundID] = soundIndex;
         return soundIndex;
+
+        int WeightedPick()
+        {
+            float totalWeight = 0f;
+            foreach (var w in sound.clips) totalWeight += Mathf.Max(0f, w.weight);
+
+            float randSoundPick = Random.Range(0f, totalWeight);
+            float cumulativeWeight = 0f;
+
+            for (int i = 0; i < sound.clips.Count; i++)
+            {
+                cumulativeWeight += Mathf.Max(0f, sound.clips[i].weight);
+
+                if (randSoundPick <= cumulativeWeight) return i;
+            }
+
+            return sound.clips.Count - 1;
+        }
+    }
+
+    private float ChooseVolume(SoundData sound, int soundClipIndex)
+    {
+        if (sound.clips[soundClipIndex].minVolume < sound.clips[soundClipIndex].maxVolume)
+        {
+            return Random.Range(sound.clips[soundClipIndex].minVolume, sound.clips[soundClipIndex].maxVolume);
+        }
+        else
+        {
+            return sound.clips[soundClipIndex].maxVolume;
+        }
+    }
+
+    private float ChoosePitch(SoundData sound, int soundClipIndex)
+    {
+        if (sound.clips[soundClipIndex].minPitch < sound.clips[soundClipIndex].maxPitch)
+        {
+            return Random.Range(sound.clips[soundClipIndex].minPitch, sound.clips[soundClipIndex].maxPitch);
+        }
+        else
+        {
+            return sound.clips[soundClipIndex].maxPitch;
+        }
     }
 }

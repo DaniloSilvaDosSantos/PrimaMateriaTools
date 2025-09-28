@@ -6,7 +6,7 @@ public class SoundLibrary : ScriptableObject
 {
     public List<SoundData> sounds;
 
-    public SoundData GetSound(string id)
+    public SoundData GetSoundData(string id)
     {
         return sounds.Find(s => s.soundID == id);
     }
