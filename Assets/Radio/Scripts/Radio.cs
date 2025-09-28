@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Radio : MonoBehaviour
@@ -17,6 +18,8 @@ public class Radio : MonoBehaviour
     [SerializeField] private SoundLibrary sfxLibrary;
 
     private Coroutine currentTransition;
+
+    private Dictionary<string, int> lastPlayedIndex = new Dictionary<string, int>();
 
     private void Awake()
     {
@@ -212,12 +215,21 @@ public class Radio : MonoBehaviour
 
     private int ChooseSound(SoundData sound)
     {
-        int soundIndex = 0;
-        if (sound.clips.Count > 1)
+        if (sound == null || sound.clips == null || sound.clips.Count == 0) return -1;
+
+        if (sound.clips.Count == 1)
         {
-            soundIndex = Random.Range(0, sound.clips.Count);
+            lastPlayedIndex[sound.soundID] = 0;
+            return 0;
         }
 
+        int lastIndex;
+        lastPlayedIndex.TryGetValue(sound.soundID, out lastIndex);
+
+        int soundIndex = Random.Range(0, sound.clips.Count);
+        if (soundIndex == lastIndex) soundIndex = Random.Range(0, sound.clips.Count);
+        
+        lastPlayedIndex[sound.soundID] = soundIndex;
         return soundIndex;
     }
 }
