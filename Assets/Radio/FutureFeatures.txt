@@ -1,5 +1,4 @@
 - Advanced Ramdomization;
-    - Adding weights per clips;
     - Volume ramdomization;
 
 - Pooling for SFX;

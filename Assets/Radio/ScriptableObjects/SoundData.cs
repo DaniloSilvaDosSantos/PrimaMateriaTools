@@ -18,6 +18,9 @@ public class ClipData
 {
     public AudioClip clip;
     public float weight = 1f;
-    [Range(0f, 1f)] public float volume = 1f;
+
+    [Header("Volume Variation")]
+    [Range(0f, 1f)] public float minVolume = 1f;
+    [Range(0f, 1f)] public float maxVolume = 1f;
 }
 
