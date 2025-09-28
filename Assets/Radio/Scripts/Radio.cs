@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Radio : MonoBehaviour
@@ -17,6 +18,8 @@ public class Radio : MonoBehaviour
     [SerializeField] private SoundLibrary sfxLibrary;
 
     private Coroutine currentTransition;
+
+    private Dictionary<string, int> lastPlayedIndex = new Dictionary<string, int>();
 
     private void Awake()
     {
@@ -37,32 +40,35 @@ public class Radio : MonoBehaviour
     public void PlayMusic(string id, MusicTransition transition = MusicTransition.None, float duration = 1f)
     {
         var sound = musicLibrary.GetSound(id);
-        if (sound == null || sound.clip == null) return;
+
+        int soundClipIndex = ChooseSound(sound);
+
+        if (sound == null || sound.clips[soundClipIndex] == null) return;
 
         if (currentTransition != null) StopFade(currentTransition);
 
-        Debug.Log($"Transition raw: {transition} ({(int)transition})");
+        //Debug.Log($"Transition raw: {transition} ({(int)transition})");
 
         switch (transition)
         {
             case MusicTransition.None:
-                PlayDirect(sound);
+                PlayDirect(sound, soundClipIndex);
                 break;
 
             case MusicTransition.Fade:
-                currentTransition = StartCoroutine(FadeOutInMusic(sound, duration));
+                currentTransition = StartCoroutine(FadeOutInMusic(sound, soundClipIndex, duration));
                 break;
 
             case MusicTransition.Crossfade:
-                currentTransition = StartCoroutine(Crossfade(sound, duration));
+                currentTransition = StartCoroutine(Crossfade(sound, soundClipIndex, duration));
                 break;
         }
     }
 
-    private void PlayDirect(SoundData sound)
+    private void PlayDirect(SoundData sound, int soundClipIndex)
     {
         activeMusicSource.Stop();
-        activeMusicSource.clip = sound.clip;
+        activeMusicSource.clip = sound.clips[soundClipIndex];
         activeMusicSource.loop = sound.loop;
         activeMusicSource.volume = sound.volume;
         activeMusicSource.Play();
@@ -83,16 +89,16 @@ public class Radio : MonoBehaviour
 
     // MUSICS TRANSITIONS //
 
-    private IEnumerator FadeOutInMusic(SoundData newSound, float duration)
+    private IEnumerator FadeOutInMusic(SoundData newSound, int soundClipIndex, float duration)
     {
         // Fade Out
         yield return StartCoroutine(FadeOutMusic(duration * 0.5f));
 
         // Fade In
-        yield return StartCoroutine(FadeInMusic(newSound, duration * 0.5f));
+        yield return StartCoroutine(FadeInMusic(newSound, soundClipIndex, duration * 0.5f));
     }
 
-    
+
     private IEnumerator FadeOutMusic(float duration, bool resetVolumeToStartVolume = false)
     {
         float startVolume = activeMusicSource.volume;
@@ -111,11 +117,11 @@ public class Radio : MonoBehaviour
 
         if (resetVolumeToStartVolume) activeMusicSource.volume = startVolume;
     }
-    
-    private IEnumerator FadeInMusic(SoundData sound, float duration)
+
+    private IEnumerator FadeInMusic(SoundData sound, int soundClipIndex, float duration)
     {
         activeMusicSource.Stop();
-        activeMusicSource.clip = sound.clip;
+        activeMusicSource.clip = sound.clips[soundClipIndex];
         activeMusicSource.loop = sound.loop;
         activeMusicSource.volume = 0f;
         activeMusicSource.Play();
@@ -133,10 +139,10 @@ public class Radio : MonoBehaviour
         activeMusicSource.volume = sound.volume;
     }
 
-    private IEnumerator Crossfade(SoundData newSound, float duration)
+    private IEnumerator Crossfade(SoundData newSound, int soundClipIndex, float duration)
     {
 
-        inactiveMusicSource.clip = newSound.clip;
+        inactiveMusicSource.clip = newSound.clips[soundClipIndex];
         inactiveMusicSource.loop = newSound.loop;
         inactiveMusicSource.volume = 0f;
         inactiveMusicSource.Play();
@@ -182,15 +188,18 @@ public class Radio : MonoBehaviour
     public void PlaySFX(string id)
     {
         var sound = sfxLibrary.GetSound(id);
-        if (sound == null || sound.clip == null) return;
 
-        GameObject temp = new GameObject($"SFX_{sound.clip.name}");
+        int soundClipIndex = ChooseSound(sound);
+
+        if (sound == null || sound.clips[soundClipIndex] == null) return;
+
+        GameObject temp = new GameObject($"SFX_{sound.clips[soundClipIndex].name}");
         temp.transform.parent = transform;
 
         AudioSource tempSource = temp.AddComponent<AudioSource>();
 
         tempSource.pitch = Random.Range(sound.minPitch, sound.maxPitch);
-        tempSource.clip = sound.clip;
+        tempSource.clip = sound.clips[soundClipIndex];
         tempSource.volume = sound.volume;
         tempSource.loop = sound.loop;
 
@@ -198,7 +207,29 @@ public class Radio : MonoBehaviour
 
         if (!tempSource.loop)
         {
-            Destroy(temp, sound.clip.length + 0.1f);
+            Destroy(temp, sound.clips[soundClipIndex].length + 0.1f);
         }
+    }
+
+    // UTILITIES METHODS
+
+    private int ChooseSound(SoundData sound)
+    {
+        if (sound == null || sound.clips == null || sound.clips.Count == 0) return -1;
+
+        if (sound.clips.Count == 1)
+        {
+            lastPlayedIndex[sound.soundID] = 0;
+            return 0;
+        }
+
+        int lastIndex;
+        lastPlayedIndex.TryGetValue(sound.soundID, out lastIndex);
+
+        int soundIndex = Random.Range(0, sound.clips.Count);
+        if (soundIndex == lastIndex) soundIndex = Random.Range(0, sound.clips.Count);
+        
+        lastPlayedIndex[sound.soundID] = soundIndex;
+        return soundIndex;
     }
 }

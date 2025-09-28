@@ -13,7 +13,9 @@ MonoBehaviour:
   m_Name: SFXTest01
   m_EditorClassIdentifier: 
   soundID: SFX/Test01
-  clip: {fileID: 8300000, guid: 9e34304e9b5ef8542a6f5a5b12daade5, type: 3}
+  clips:
+  - {fileID: 8300000, guid: 9e34304e9b5ef8542a6f5a5b12daade5, type: 3}
+  - {fileID: 8300000, guid: 663d19031ed580a498c9e288deb16523, type: 3}
   loop: 0
   volume: 1
   minPitch: 0.8
