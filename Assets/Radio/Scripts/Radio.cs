@@ -1,7 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Rendering;
-using UnityEditor.Timeline.Actions;
 using UnityEngine;
 
 public class Radio : MonoBehaviour
@@ -21,7 +19,7 @@ public class Radio : MonoBehaviour
 
     private Coroutine currentTransition;
 
-    private Dictionary<string, int> lastPlayedIndex = new Dictionary<string, int>();
+    private Dictionary<(SoundData.SoundType, string), int> lastPlayedIndex = new Dictionary<(SoundData.SoundType, string), int>();
 
     private void Awake()
     {
@@ -37,15 +35,20 @@ public class Radio : MonoBehaviour
         inactiveMusicSource = musicSourceB;
     }
 
+    private void Update()
+    {
+        HandleMusicLoop(activeMusicSource);
+    }
+
     // MUSICS METHODS //
 
     public void PlayMusic(string id, MusicTransition transition = MusicTransition.None, float duration = 1f)
     {
-        var sound = musicLibrary.GetSoundData(id);
+        SoundData soundData = musicLibrary.GetSoundData(id);
 
-        int soundClipIndex = ChooseSound(sound);
+        int soundClipIndex = ChooseSound(soundData);
 
-        if (sound == null || sound.clips[soundClipIndex] == null) return;
+        if (soundData == null || soundData.clips[soundClipIndex] == null) return;
 
         if (currentTransition != null) StopFade(currentTransition);
 
@@ -54,15 +57,15 @@ public class Radio : MonoBehaviour
         switch (transition)
         {
             case MusicTransition.None:
-                PlayDirect(sound, soundClipIndex);
+                PlayDirect(soundData, soundClipIndex);
                 break;
 
             case MusicTransition.Fade:
-                currentTransition = StartCoroutine(FadeOutInMusic(sound, soundClipIndex, duration));
+                currentTransition = StartCoroutine(FadeOutInMusic(soundData, soundClipIndex, duration));
                 break;
 
             case MusicTransition.Crossfade:
-                currentTransition = StartCoroutine(Crossfade(sound, soundClipIndex, duration));
+                currentTransition = StartCoroutine(Crossfade(soundData, soundClipIndex, duration));
                 break;
         }
     }
@@ -71,7 +74,16 @@ public class Radio : MonoBehaviour
     {
         activeMusicSource.Stop();
         activeMusicSource.clip = sound.clips[soundClipIndex].clip;
-        activeMusicSource.loop = sound.clips[soundClipIndex].loop;
+
+        if (!sound.clips[soundClipIndex].useLoopPoints)
+        {
+            activeMusicSource.loop = sound.clips[soundClipIndex].loop;
+        }
+        else
+        {
+            activeMusicSource.loop = false;
+        }
+
         activeMusicSource.volume = ChooseVolume(sound, soundClipIndex);
         activeMusicSource.Play();
     }
@@ -124,7 +136,16 @@ public class Radio : MonoBehaviour
     {
         activeMusicSource.Stop();
         activeMusicSource.clip = sound.clips[soundClipIndex].clip;
-        activeMusicSource.loop = sound.clips[soundClipIndex].clip;
+
+        if (!sound.clips[soundClipIndex].useLoopPoints)
+        {
+            activeMusicSource.loop = sound.clips[soundClipIndex].loop;
+        }
+        else
+        {
+            activeMusicSource.loop = false;
+        }
+
         activeMusicSource.volume = 0f;
         activeMusicSource.Play();
 
@@ -147,7 +168,16 @@ public class Radio : MonoBehaviour
     {
 
         inactiveMusicSource.clip = newSound.clips[soundClipIndex].clip;
-        inactiveMusicSource.loop = newSound.clips[soundClipIndex].clip;
+
+        if (!newSound.clips[soundClipIndex].useLoopPoints)
+        {
+            activeMusicSource.loop = newSound.clips[soundClipIndex].loop;
+        }
+        else
+        {
+            activeMusicSource.loop = false;
+        }
+
         inactiveMusicSource.volume = 0f;
         inactiveMusicSource.Play();
 
@@ -170,9 +200,7 @@ public class Radio : MonoBehaviour
         activeMusicSource.Stop();
         inactiveMusicSource.volume = sortedVolume;
 
-        var temp = activeMusicSource;
-        activeMusicSource = inactiveMusicSource;
-        inactiveMusicSource = temp;
+        (inactiveMusicSource, activeMusicSource) = (activeMusicSource, inactiveMusicSource);
     }
 
     public void StopFade(Coroutine fadeRoutine, bool stopAndMute = false)
@@ -193,68 +221,70 @@ public class Radio : MonoBehaviour
 
     public void PlaySFX(string id)
     {
-        var sound = sfxLibrary.GetSoundData(id);
+        SoundData soundData = sfxLibrary.GetSoundData(id);
 
-        int soundClipIndex = ChooseSound(sound);
+        int soundClipIndex = ChooseSound(soundData);
 
-        if (sound == null || sound.clips[soundClipIndex] == null) return;
+        if (soundData == null || soundData.clips[soundClipIndex] == null) return;
 
-        GameObject temp = new GameObject($"SFX_{sound.clips[soundClipIndex].clip.name}");
+        GameObject temp = new GameObject($"SFX_{soundData.clips[soundClipIndex].clip.name}");
         temp.transform.parent = transform;
 
         AudioSource tempSource = temp.AddComponent<AudioSource>();
 
-        tempSource.pitch = ChoosePitch(sound, soundClipIndex);
-        tempSource.clip = sound.clips[soundClipIndex].clip;
-        tempSource.volume = ChooseVolume(sound, soundClipIndex);
-        tempSource.loop = sound.clips[soundClipIndex].loop;
+        tempSource.pitch = ChoosePitch(soundData, soundClipIndex);
+        tempSource.clip = soundData.clips[soundClipIndex].clip;
+        tempSource.volume = ChooseVolume(soundData, soundClipIndex);
+        tempSource.loop = soundData.clips[soundClipIndex].loop;
 
         tempSource.Play();
 
         if (!tempSource.loop)
         {
-            Destroy(temp, sound.clips[soundClipIndex].clip.length + 0.1f);
+            Destroy(temp, soundData.clips[soundClipIndex].clip.length + 0.1f);
         }
     }
 
     // UTILITIES METHODS
 
-    private int ChooseSound(SoundData sound)
+    private int ChooseSound(SoundData soundData)
     {
-        if (sound == null || sound.clips == null || sound.clips.Count == 0) return -1;
+        if (soundData == null || soundData.clips == null || soundData.clips.Count == 0) return -1;
 
-        if (sound.clips.Count == 1)
+        var key = (soundData.type, soundData.soundID);
+
+        if (soundData.clips.Count == 1)
         {
-            lastPlayedIndex[sound.soundID] = 0;
+            lastPlayedIndex[key] = 0;
             return 0;
         }
 
         int lastIndex;
-        lastPlayedIndex.TryGetValue(sound.soundID, out lastIndex);
+        lastPlayedIndex.TryGetValue(key, out lastIndex);
 
         int soundIndex = WeightedPick();
 
         if (soundIndex == lastIndex) soundIndex = WeightedPick();
 
-        lastPlayedIndex[sound.soundID] = soundIndex;
+        lastPlayedIndex[key] = soundIndex;
         return soundIndex;
 
         int WeightedPick()
         {
             float totalWeight = 0f;
-            foreach (var w in sound.clips) totalWeight += Mathf.Max(0f, w.weight);
+            foreach (ClipData w in soundData.clips) totalWeight += Mathf.Max(0f, w.weight);
 
-            float randSoundPick = Random.Range(0f, totalWeight);
+            float randomSoundPick = Random.Range(0f, totalWeight);
             float cumulativeWeight = 0f;
 
-            for (int i = 0; i < sound.clips.Count; i++)
+            for (int i = 0; i < soundData.clips.Count; i++)
             {
-                cumulativeWeight += Mathf.Max(0f, sound.clips[i].weight);
+                cumulativeWeight += Mathf.Max(0f, soundData.clips[i].weight);
 
-                if (randSoundPick <= cumulativeWeight) return i;
+                if (randomSoundPick <= cumulativeWeight) return i;
             }
 
-            return sound.clips.Count - 1;
+            return soundData.clips.Count - 1;
         }
     }
 
@@ -279,6 +309,30 @@ public class Radio : MonoBehaviour
         else
         {
             return sound.clips[soundClipIndex].maxPitch;
+        }
+    }
+
+    private void HandleMusicLoop(AudioSource audioSource)
+    {
+        if (audioSource == null || !audioSource.isPlaying || audioSource.clip == null) return;
+
+        SoundData soundData = musicLibrary.GetSoundDataByClip(audioSource.clip);
+        if (soundData == null) return;
+
+        var key = (soundData.type, soundData.soundID);
+
+        int lastIndex;
+        if (!lastPlayedIndex.TryGetValue(key, out lastIndex)) return;
+
+        ClipData clipData = soundData.clips[lastIndex];
+        if (!clipData.useLoopPoints) return;
+
+        int loopStartSample = Mathf.FloorToInt(clipData.loopStart * audioSource.clip.frequency);
+        int loopEndSample = Mathf.FloorToInt(clipData.loopEnd * audioSource.clip.frequency);
+
+        if (audioSource.timeSamples >= loopEndSample)
+        {
+            audioSource.timeSamples = loopStartSample;
         }
     }
 }

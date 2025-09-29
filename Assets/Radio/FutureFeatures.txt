@@ -1,7 +1,5 @@
 - Pooling for SFX;
 
-- Adding seguimented loops(loop point B to A) for musics;
-
 - Custom Editor for SoundData that permits play direct in the inspector;
 
 - Visual markers in the audio clip timiline in the inspector(custom editor);
