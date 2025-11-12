@@ -7,7 +7,7 @@ public class RadioDebugger : MonoBehaviour
     [Header("Radio References")]
     [SerializeField] private AudioSource musicSourceA;
     [SerializeField] private AudioSource musicSourceB;
-    [SerializeField] private Transform sfxParent;
+    [SerializeField] private Transform parentTransform;
 
     [Header("UI")]
     [SerializeField] private TMP_Text debugText;
@@ -21,9 +21,9 @@ public class RadioDebugger : MonoBehaviour
         LogAudioSource(musicSourceB, "[MUSIC]", lines);
 
         // --- SFX SOURCES ---
-        if (sfxParent != null)
+        if (parentTransform != null)
         {
-            foreach (Transform child in sfxParent)
+            foreach (Transform child in parentTransform)
             {
                 AudioSource src = child.GetComponent<AudioSource>();
                 if (src == null || src.clip == null) continue;
