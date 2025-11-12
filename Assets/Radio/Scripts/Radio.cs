@@ -219,29 +219,32 @@ public class Radio : MonoBehaviour
 
     // SFX METHODS
 
-    public void PlaySFX(string id)
+    public void PlaySFX(string id, AudioSource customSource = null)
     {
         SoundData soundData = sfxLibrary.GetSoundData(id);
-
         int soundClipIndex = ChooseSound(soundData);
 
         if (soundData == null || soundData.clips[soundClipIndex] == null) return;
 
-        GameObject temp = new GameObject($"SFX_{soundData.clips[soundClipIndex].clip.name}");
-        temp.transform.parent = transform;
+        AudioSource targetSource = customSource;
 
-        AudioSource tempSource = temp.AddComponent<AudioSource>();
-
-        tempSource.pitch = ChoosePitch(soundData, soundClipIndex);
-        tempSource.clip = soundData.clips[soundClipIndex].clip;
-        tempSource.volume = ChooseVolume(soundData, soundClipIndex);
-        tempSource.loop = soundData.clips[soundClipIndex].loop;
-
-        tempSource.Play();
-
-        if (!tempSource.loop)
+        if(targetSource == null)
         {
-            Destroy(temp, soundData.clips[soundClipIndex].clip.length + 0.1f);
+            GameObject temp = new GameObject($"SFX_{soundData.clips[soundClipIndex].clip.name}");
+            temp.transform.parent = transform;
+            targetSource = temp.AddComponent<AudioSource>();
+        }
+
+        targetSource.pitch = ChoosePitch(soundData, soundClipIndex);
+        targetSource.clip = soundData.clips[soundClipIndex].clip;
+        targetSource.volume = ChooseVolume(soundData, soundClipIndex);
+        targetSource.loop = soundData.clips[soundClipIndex].loop;
+
+        targetSource.Play();
+
+        if (customSource == null && !targetSource.loop)
+        {
+            Destroy(targetSource, soundData.clips[soundClipIndex].clip.length + 0.1f);
         }
     }
 
