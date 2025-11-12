@@ -1,10 +1,17 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class RadioInputTester : MonoBehaviour
 {
-    [Header("Teclas de Debug")]
+    [Header("References")]
+    [SerializeField] private AudioSource debugAudioSource;
+    [Space]
+
+    [Header("Debug Inputs")]
     [SerializeField] private KeyCode musicKey = KeyCode.M;
     [SerializeField] private KeyCode sfxKey = KeyCode.N;
+    [SerializeField] private KeyCode sfxKeyCustomAudioSorce = KeyCode.B;
+    [Space] 
     [SerializeField] private KeyCode musicFadeIn = KeyCode.I;
     [SerializeField] private KeyCode musicFadeOut = KeyCode.O;
     [SerializeField] private KeyCode musicCrossFade = KeyCode.U;
@@ -47,6 +54,11 @@ public class RadioInputTester : MonoBehaviour
         if (Input.GetKeyDown(sfxKey))
         {
             Radio.Instance.PlaySFX("SFX/Test01");
+        }
+
+        if(Input.GetKeyDown(sfxKeyCustomAudioSorce))
+        {
+            Radio.Instance.PlaySFX("SFX/Test01", debugAudioSource);
         }
     }
 }

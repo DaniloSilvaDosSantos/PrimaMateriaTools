@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb4640c5627633247a15810d22dc2089, type: 3}
   m_Name: SFXLibrary
   m_EditorClassIdentifier: 
-  sounds:
+  soundDatas:
   - {fileID: 11400000, guid: 314f530c7cda41743a3236afc5f7434f, type: 2}
