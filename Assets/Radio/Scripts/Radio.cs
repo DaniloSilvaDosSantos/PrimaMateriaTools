@@ -244,7 +244,7 @@ public class Radio : MonoBehaviour
 
         if (customSource == null && !targetSource.loop)
         {
-            Destroy(targetSource, soundData.clips[soundClipIndex].clip.length + 0.1f);
+            Destroy(targetSource.gameObject, soundData.clips[soundClipIndex].clip.length + 0.1f);
         }
     }
 
